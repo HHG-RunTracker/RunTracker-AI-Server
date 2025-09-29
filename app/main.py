@@ -1,14 +1,16 @@
 from fastapi import FastAPI
-from app.routers import recommendations # 라우터 import
+from app.routers import recommendations
+from app.routers import animal_courses
 
-# FastAPI 앱 인스턴스 생성
 app = FastAPI(
-    title="Running Course Recommendation API",
-    description="RunTracker AI API"
+    title="RunTracker AI API",
+    description="RunTracker FastAPI Server API"
 )
 
-# recommendations 라우터를 메인 앱에 포함
+# 추천 API
 app.include_router(recommendations.router)
+# 동물형 코스 생성 API
+app.include_router(animal_courses.router)
 
 @app.get("/", tags=["Root"])
 def read_root():

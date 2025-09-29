@@ -1,8 +1,7 @@
 from fastapi import APIRouter, HTTPException
-from pydantic import BaseModel, Field
+from pydantic import BaseModel
 from typing import List
 
-# 서비스 계층의 함수를 import
 from app.services.recommendation_service import calculate_recommendations
 
 router = APIRouter(
@@ -10,22 +9,23 @@ router = APIRouter(
     tags=["Recommendations"]
 )
 
+# 사용자 기록
 class UserRecord(BaseModel):
-    """사용자의 단일 러닝 기록 모델"""
     course_id: int
     ran_distance: float
     difficulty: str
     latitude: float
     longitude: float
 
+# 주변 반경 코스
 class Course(BaseModel):
-    """코스 정보 모델"""
     course_id: int
     distance: float
     difficulty: str
     latitude: float
     longitude: float
 
+# Request
 class RecommendationRequest(BaseModel):
     user_records: List[UserRecord]
     nearby_courses: List[Course]
@@ -45,7 +45,8 @@ def get_recommendations(request: RecommendationRequest):
 
     recommendations = calculate_recommendations(user_records_dict, nearby_courses_dict)
     
+    # 추천할 코스가 없으면 빈 리스트 반환
     if recommendations is None or recommendations.empty:
-        return [] # 추천할 코스가 없으면 빈 리스트 반환
+        return []
 
     return recommendations.to_dict('records')
