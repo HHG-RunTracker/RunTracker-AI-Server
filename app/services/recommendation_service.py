@@ -14,7 +14,7 @@ def calculate_recommendations_Record(user_records: list[dict], nearby_courses: l
         return pd.DataFrame(columns=['course_id', 'similarity'])
 
     # 2. 사용자 프로필 생성
-    difficulty_mapping = {'쉬움': 1, '보통': 2, '어려움': 3}
+    difficulty_mapping = {'EASY': 1, 'MEDIUM': 2, 'HARD': 3}
     user_runs['difficulty_numeric'] = user_runs['difficulty'].map(difficulty_mapping)
 
     mode_result = user_runs['difficulty_numeric'].mode()
@@ -81,7 +81,7 @@ def calculate_recommendations_Setting(user_setting: dict, nearby_courses: list[d
         return pd.DataFrame()
 
     # 2. 난이도를 숫자 데이터로 변환
-    difficulty_mapping = {'쉬움': 1, '보통': 2, '어려움': 3}
+    difficulty_mapping = {'EASY': 1, 'MEDIUM': 2, 'HARD': 3}
     user_profile_df['difficulty_numeric'] = user_profile_df['difficulty'].map(difficulty_mapping)
     courses_df['difficulty_numeric'] = courses_df['difficulty'].map(difficulty_mapping)
 
