@@ -2,7 +2,8 @@ from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
 from typing import List
 
-from app.services.recommendation_service import calculate_recommendations
+from app.services.recommendation_service import calculate_recommendations_Record
+from app.services.recommendation_service import calculate_recommendations_Setting
 
 router = APIRouter(
     prefix="/recommend",
@@ -17,6 +18,11 @@ class UserRecord(BaseModel):
     latitude: float
     longitude: float
 
+# 사용자 설정
+class UserSetting(BaseModel):
+    distance: float
+    difficulty: str
+
 # 주변 반경 코스
 class Course(BaseModel):
     course_id: int
@@ -25,13 +31,18 @@ class Course(BaseModel):
     latitude: float
     longitude: float
 
-# Request
-class RecommendationRequest(BaseModel):
+# Record Request
+class RecommendationRequestRecord(BaseModel):
     user_records: List[UserRecord]
     nearby_courses: List[Course]
 
-@router.post("/")
-def get_recommendations(request: RecommendationRequest):
+# Setting Request
+class RecommendationRequestSetting(BaseModel):
+    user_setting: UserSetting
+    nearby_courses: List[Course]
+
+@router.post("/record")
+def get_recommendations_record(request: RecommendationRequestRecord):
     """
     사용자 기록과 주변 코스 목록을 받아 맞춤형 코스를 추천합니다.
     """
@@ -43,7 +54,28 @@ def get_recommendations(request: RecommendationRequest):
     if not user_records_dict or not nearby_courses_dict:
         raise HTTPException(status_code=400, detail="유저 기록과 주변 코스 목록이 모두 필요합니다.")
 
-    recommendations = calculate_recommendations(user_records_dict, nearby_courses_dict)
+    recommendations = calculate_recommendations_Record(user_records_dict, nearby_courses_dict)
+    
+    # 추천할 코스가 없으면 빈 리스트 반환
+    if recommendations is None or recommendations.empty:
+        return []
+
+    return recommendations.to_dict('records')
+
+@router.post("/setting")
+def get_recommendations_setting(request: RecommendationRequestSetting):
+    """
+    사용자 설정과 주변 코스 목록을 받아 맞춤형 코스를 추천합니다.
+    """
+    # Pydantic 모델을 서비스 계층에 전달하기 위해 다시 dict 리스트로 변환
+    user_setting_dict = request.user_setting.model_dump()
+    nearby_courses_dict = [course.model_dump() for course in request.nearby_courses]
+
+    # 두 목록 중 하나라도 비어있으면 계산 불가
+    if not nearby_courses_dict:
+        raise HTTPException(status_code=400, detail="주변 코스 목록이 필요합니다.")
+    
+    recommendations = calculate_recommendations_Setting(user_setting_dict, nearby_courses_dict)
     
     # 추천할 코스가 없으면 빈 리스트 반환
     if recommendations is None or recommendations.empty:
