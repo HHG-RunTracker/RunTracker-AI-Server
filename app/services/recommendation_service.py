@@ -33,8 +33,10 @@ def calculate_recommendations_Record(user_records: list[dict], nearby_courses: l
     courses_to_recommend['difficulty_numeric'] = courses_to_recommend['difficulty'].map(difficulty_mapping)
 
     # 4. 유사도 계산을 위한 벡터화 및 정규화
-    features = ['distance', 'difficulty_numeric', 'latitude', 'longitude']
-    
+    features = ['difficulty_numeric', 'latitude', 'longitude']
+    if user_profile['distance'] > 0:
+        features.insert(0, 'distance')
+
     user_profile_df = user_profile.to_frame().T
     
     # 정규화를 위해 추천 대상 코스와 사용자 프로필을 하나로 합침
@@ -81,7 +83,10 @@ def calculate_recommendations_Setting(user_setting: dict, nearby_courses: list[d
 
     # 3. 유사도 계산을 위한 특성(feature) 선택
     # 여기서는 사용자가 설정한 'distance'와 'difficulty'만 사용합니다.
-    features = ['distance', 'difficulty_numeric']
+    if user_setting.get('distance', 0) > 0:
+        features = ['distance', 'difficulty_numeric']
+    else:
+        features = ['difficulty_numeric']
     
     user_vector = user_profile_df[features]
     course_vectors = courses_df[features]
