@@ -4,7 +4,7 @@ from sklearn.preprocessing import MinMaxScaler
 
 def calculate_recommendations_Record(user_records: list[dict], nearby_courses: list[dict]):
     """
-    사용자 기록과 주변 코스 목록(dict 리스트)을 받아 추천 코스 ID와 유사도를 반환합니다.
+    사용자 기록과 주변 코스 목록을 받아 추천 코스 ID와 유사도를 반환합니다.
     """
     # 1. 입력 데이터를 DataFrame으로 변환
     user_runs = pd.DataFrame(user_records)
@@ -42,14 +42,16 @@ def calculate_recommendations_Record(user_records: list[dict], nearby_courses: l
         ignore_index=True
     )
     
-    # 데이터가 1개뿐이거나, 특정 피처의 모든 값이 동일하면 정규화 시 NaN이 발생하므로 예외 처리
-    if len(combined_data) < 2 or any(combined_data[f].nunique() == 1 for f in features):
-        # 이 경우 추천 로직을 수행할 수 없으므로 빈 DataFrame 반환
+    features_to_use = features.copy()
+    for f in features:
+        if combined_data[f].nunique() == 1:
+            features_to_use.remove(f)
+            
+    if not features_to_use or len(combined_data) < 2:
         return pd.DataFrame(columns=['course_id', 'similarity'])
-    # ---------------------------
-    
+
     scaler = MinMaxScaler()
-    scaled_features = scaler.fit_transform(combined_data)
+    scaled_features = scaler.fit_transform(combined_data[features_to_use])
     
     scaled_courses = scaled_features[:-1]
     scaled_user_profile = scaled_features[-1].reshape(1, -1)
@@ -69,16 +71,17 @@ def calculate_recommendations_Record(user_records: list[dict], nearby_courses: l
     
     return final_recommendations[['course_id', 'similarity']]
 
+
 def calculate_recommendations_Setting(user_setting: dict, nearby_courses: list[dict]):
     """
-    사용자 설정(거리, 난이도)과 주변 코스 목록을 받아 맞춤형 코스를 추천합니다.
+    사용자 설정과 주변 코스 목록을 받아 맞춤형 코스를 추천합니다. (반환 형식 통일)
     """
     # 1. 입력 데이터를 DataFrame으로 변환
     user_profile_df = pd.DataFrame([user_setting])
     courses_df = pd.DataFrame(nearby_courses)
 
     if courses_df.empty:
-        return pd.DataFrame()
+        return pd.DataFrame(columns=['course_id', 'similarity'])
 
     # 2. 난이도를 숫자 데이터로 변환
     difficulty_mapping = {'EASY': 1, 'MEDIUM': 2, 'HARD': 3}
@@ -97,15 +100,21 @@ def calculate_recommendations_Setting(user_setting: dict, nearby_courses: list[d
     # 4. 정규화
     combined_data = pd.concat([user_vector, course_vectors], ignore_index=True)
     
-    if len(combined_data) < 2 or any(combined_data[f].nunique() == 1 for f in features):
-        # 모든 코스의 난이도가 같을 경우, 가장 가까운 순서 등으로 대체 로직을 구현하거나
-        # 여기서는 단순히 유사도 기반 추천이 불가능하므로 빈 DataFrame을 반환합니다.
-        # (만약 features가 difficulty_numeric 하나인데 모든 코스가 보통이면 이 조건에 해당)
-        return pd.DataFrame()
-    # ---------------------------
-        
+    features_to_use = features.copy()
+    for f in features:
+        if combined_data[f].nunique() == 1:
+            features_to_use.remove(f)
+
+    if not features_to_use or len(combined_data) < 2:
+        # 유사도 계산 불가 시, 거리순으로 추천하며 반환 형식 통일
+        if 'distance' in courses_df.columns:
+            fallback_recs = courses_df.sort_values(by='distance').head(3)
+            fallback_recs['similarity'] = 0.0 # 유사도 없으므로 0.0으로 설정
+            return fallback_recs[['course_id', 'similarity']]
+        return pd.DataFrame(columns=['course_id', 'similarity'])
+    
     scaler = MinMaxScaler()
-    scaled_features = scaler.fit_transform(combined_data)
+    scaled_features = scaler.fit_transform(combined_data[features_to_use])
     
     scaled_user_profile = scaled_features[0].reshape(1, -1)
     scaled_courses = scaled_features[1:]
@@ -120,4 +129,4 @@ def calculate_recommendations_Setting(user_setting: dict, nearby_courses: list[d
         by='similarity', ascending=False
     ).head(3)
     
-    return final_recommendations
+    return final_recommendations[['course_id', 'similarity']]
