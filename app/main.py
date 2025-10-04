@@ -11,7 +11,3 @@ app = FastAPI(
 app.include_router(recommendations.router)
 # 동물형 코스 생성 API
 app.include_router(animal_courses.router)
-
-@app.get("/", tags=["Root"])
-def read_root():
-    return {"message": "RunTracker AI Server"}
