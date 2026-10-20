@@ -1,0 +1,9 @@
+# requirements.txt
+
+fastapi
+uvicorn[standard]
+pandas
+scikit-learn
+osmnx
+opencv-python
+numpy
